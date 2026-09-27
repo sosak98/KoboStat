@@ -1,0 +1,22 @@
+databases:
+  - name: kobostat-db
+    plan: free
+    databaseName: kobostat
+    user: kobostat
+
+services:
+  - type: web
+    name: kobostat
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /accounts/login/
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kobostat-db
+          property: connectionString

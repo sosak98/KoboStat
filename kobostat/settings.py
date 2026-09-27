@@ -30,13 +30,19 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
 
-# En sandbox de démo on ouvre large ; en production, restreindre à votre domaine.
+# En sandbox de démo (Arena) on ouvre large ; sur Render, on restreint via
+# RENDER_EXTERNAL_HOSTNAME (fourni automatiquement par Render).
 ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = [
     "https://*.e2b.app",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 
 # Application definition
@@ -53,16 +59,20 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # XFrameOptionsMiddleware volontairement désactivé : la démo doit pouvoir
-    # s'afficher dans l'iframe d'aperçu du workspace (autre origine). En
-    # production réelle (hors sandbox de démo), on la réactivera avec
-    # SAMEORIGIN pour la sécurité.
 ]
+
+# XFrameOptionsMiddleware est désactivée uniquement dans le sandbox de démo
+# Arena (pour que l'aperçu s'affiche dans son iframe d'une autre origine).
+# Sur Render (production), elle reste active avec SAMEORIGIN par sécurité.
+if os.environ.get("ARENA_SANDBOX_PREVIEW") != "1":
+    MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
+
 
 ROOT_URLCONF = 'kobostat.urls'
 
@@ -135,6 +145,18 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+# Sécurité additionnelle activée automatiquement quand DEBUG=False (Render)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "True") == "True"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "project_list"
