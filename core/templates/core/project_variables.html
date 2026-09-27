@@ -1,0 +1,35 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>Variables — {{ project.name }}</h4>
+  <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-secondary btn-sm">← Retour</a>
+</div>
+<form method="post">
+  {% csrf_token %}
+  <div class="table-responsive">
+  <table class="table table-sm align-middle bg-white">
+    <thead><tr><th>Nom (champ)</th><th>Libellé</th><th>Type</th><th>Recodage (JSON)</th><th>Filtre dashboard</th></tr></thead>
+    <tbody>
+      {% for v in variables %}
+      <tr>
+        <td><code>{{ v.name }}</code></td>
+        <td><input type="text" name="label_{{ v.id }}" value="{{ v.label }}" class="form-control form-control-sm"></td>
+        <td>
+          <select name="type_{{ v.id }}" class="form-select form-select-sm">
+            <option value="numerique" {% if v.var_type == "numerique" %}selected{% endif %}>Numérique</option>
+            <option value="categorielle" {% if v.var_type == "categorielle" %}selected{% endif %}>Catégorielle</option>
+            <option value="likert" {% if v.var_type == "likert" %}selected{% endif %}>Likert</option>
+            <option value="date" {% if v.var_type == "date" %}selected{% endif %}>Date</option>
+            <option value="texte" {% if v.var_type == "texte" %}selected{% endif %}>Texte libre</option>
+          </select>
+        </td>
+        <td><input type="text" name="recoding_{{ v.id }}" placeholder='{"1":"Homme","2":"Femme"}' value='{% if v.recoding_map %}{{ v.recoding_map|safe }}{% endif %}' class="form-control form-control-sm"></td>
+        <td class="text-center"><input type="checkbox" name="filterable_{{ v.id }}" {% if v.is_filterable %}checked{% endif %}></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <button type="submit" class="btn btn-primary">Enregistrer</button>
+</form>
+{% endblock %}

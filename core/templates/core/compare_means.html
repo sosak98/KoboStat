@@ -1,0 +1,61 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>⚖️ Comparaison de moyennes</h4>
+  <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-secondary btn-sm">← Retour au projet</a>
+</div>
+
+<div class="card p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-auto">
+      <label class="form-label small mb-0">Variable numérique</label>
+      <select name="num_var" class="form-select form-select-sm" style="width:200px">
+        <option value="">-- choisir --</option>
+        {% for c in columns %}<option value="{{ c }}" {% if c == num_var %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0">Variable de groupe</label>
+      <select name="group_var" class="form-select form-select-sm" style="width:200px">
+        <option value="">-- choisir --</option>
+        {% for c in columns %}<option value="{{ c }}" {% if c == group_var %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    {% for v in filterable %}
+    <div class="col-auto">
+      <label class="form-label small mb-0">Filtre : {{ v.label|default:v.name }}</label>
+      <input type="text" name="f_{{ v.name }}" value="{{ filters|get_item:v.name }}" class="form-control form-control-sm" style="width:150px">
+    </div>
+    {% endfor %}
+    <div class="col-auto"><button class="btn btn-sm btn-primary">Afficher</button></div>
+  </form>
+</div>
+
+{% if chart_html %}
+<div class="row g-3">
+  <div class="col-md-6"><div class="card p-3"><h6>Graphique</h6>{{ chart_html|safe }}</div></div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>Résultat du test ({% if test_used == "t" %}t de Student{% else %}ANOVA{% endif %})</h6>
+      {% if table_html %}{{ table_html|safe }}{% endif %}
+      {% if result %}
+        <ul class="small">
+          {% if test_used == "t" %}
+          <li>Groupes : {{ result.groupes.0 }} (n={{ result.n1 }}, M={{ result.moy1 }}) vs {{ result.groupes.1 }} (n={{ result.n2 }}, M={{ result.moy2 }})</li>
+          <li>t({{ result.ddl }}) = {{ result.t }}, p = {{ result.p_value|floatformat:4 }}</li>
+          {% else %}
+          <li>F({{ result.ddl_entre }}, {{ result.ddl_intra }}) = {{ result.F }}, p = {{ result.p_value|floatformat:4 }}</li>
+          {% endif %}
+        </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="card p-3 mt-3">
+  <h6>Interprétation ({{ lang|upper }})</h6>
+  <p>{{ text }}</p>
+  <a href="{% url 'compare_means_add' project.pk %}?num_var={{ num_var }}&group_var={{ group_var }}&lang={{ lang }}" class="btn btn-success btn-sm">➕ Ajouter au rapport</a>
+</div>
+{% endif %}
+{% endblock %}

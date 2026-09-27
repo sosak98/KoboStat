@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <h4 class="mb-3">Nouveau projet</h4>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Nom du projet</label>
+          {{ form.name }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Source des données</label>
+          {{ form.source }}
+        </div>
+        <hr>
+        <p class="text-muted small">Si connexion à KoboToolbox (laissez vide pour importer un fichier à la place — ou pour tester avec des données de démonstration) :</p>
+        <div class="mb-3">
+          <label class="form-label">URL de base Kobo</label>
+          {{ form.kobo_base_url }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Token API Kobo</label>
+          {{ form.kobo_api_token }}
+          <div class="form-text">Compte Kobo → Paramètres du compte → API.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">UID du formulaire</label>
+          {{ form.kobo_asset_uid }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Colonne clé anti-doublons (optionnel)</label>
+          {{ form.dedup_key_column }}
+        </div>
+        <button type="submit" class="btn btn-primary">Créer le projet</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

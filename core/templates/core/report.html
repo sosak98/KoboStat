@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>📄 Mon rapport — {{ project.name }}</h4>
+  <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-secondary btn-sm">← Retour au projet</a>
+</div>
+
+<div class="d-flex gap-2 mb-3">
+  <a href="{% url 'report_word' project.pk %}" class="btn btn-primary btn-sm">⬇️ Télécharger en Word (.docx)</a>
+  <a href="{% url 'report_pdf' project.pk %}" class="btn btn-outline-primary btn-sm">⬇️ Télécharger en PDF</a>
+  <form method="post" action="{% url 'report_clear' project.pk %}" onsubmit="return confirm('Vider tout le rapport ?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-danger btn-sm">🗑️ Vider le rapport</button>
+  </form>
+</div>
+
+<div class="card p-4">
+  <h3>{{ report.title }}</h3>
+  {% if not blocks %}
+    <p class="text-muted">Votre rapport est vide. Ajoutez des analyses depuis les pages d'analyse avec le bouton « ➕ Ajouter au rapport ».</p>
+  {% endif %}
+  {% for b in blocks %}
+    {% if b.type == "heading" %}<h5 class="mt-4 text-primary">{{ b.content }}</h5>{% endif %}
+    {% if b.type == "text" %}<p>{{ b.content }}</p>{% endif %}
+    {% if b.type == "table" %}<p class="small fst-italic">{{ b.caption }}</p>{{ b.html|safe }}{% endif %}
+    {% if b.type == "image" %}
+      <img src="data:image/png;base64,{{ b.b64 }}" class="img-fluid my-2" style="max-width:600px;">
+      <p class="small fst-italic text-center">{{ b.caption }}</p>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

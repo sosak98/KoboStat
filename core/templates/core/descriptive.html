@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>📋 Statistiques descriptives</h4>
+  <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-secondary btn-sm">← Retour au projet</a>
+</div>
+
+<div class="card p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-auto">
+      <label class="form-label small mb-0">Variable</label>
+      <select name="var" class="form-select form-select-sm" style="width:220px">
+        <option value="">-- choisir --</option>
+        {% for c in columns %}<option value="{{ c }}" {% if c == var %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    {% for v in filterable %}
+    <div class="col-auto">
+      <label class="form-label small mb-0">Filtre : {{ v.label|default:v.name }}</label>
+      <input type="text" name="f_{{ v.name }}" value="{{ filters|get_item:v.name }}" placeholder="valeur" class="form-control form-control-sm" style="width:150px">
+    </div>
+    {% endfor %}
+    <div class="col-auto"><button class="btn btn-sm btn-primary">Afficher</button></div>
+  </form>
+</div>
+
+{% if table_html %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>Tableau</h6>
+      {{ table_html|safe }}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>Graphique</h6>
+      {{ chart_html|safe }}
+    </div>
+  </div>
+</div>
+<div class="card p-3 mt-3">
+  <h6>Interprétation ({{ lang|upper }})</h6>
+  <p>{{ text }}</p>
+  <a href="{% url 'descriptive_add' project.pk %}?var={{ var }}&lang={{ lang }}" class="btn btn-success btn-sm">➕ Ajouter au rapport</a>
+</div>
+{% endif %}
+{% endblock %}

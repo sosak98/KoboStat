@@ -1,0 +1,64 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>{{ project.name }}</h3>
+  <a href="{% url 'report' project.pk %}" class="btn btn-outline-primary">📄 Mon rapport</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card p-3 text-center"><div class="fs-3 fw-bold text-primary">{{ n_submissions }}</div><div class="text-muted small">Observations valides</div></div></div>
+  <div class="col-md-3"><div class="card p-3 text-center"><div class="fs-3 fw-bold text-warning">{{ n_duplicates }}</div><div class="text-muted small">Doublons exclus</div></div></div>
+  <div class="col-md-3"><div class="card p-3 text-center"><div class="fs-6 text-muted">Dernière synchro</div><div>{{ project.last_synced_at|default:"Jamais" }}</div></div></div>
+  <div class="col-md-3"><div class="card p-3 text-center"><div class="fs-6 text-muted">Source</div><div>{{ project.get_source_display }}</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>🔄 Synchroniser depuis Kobo</h6>
+      <p class="text-muted small">Si aucun token n'est configuré, des données de démonstration seront générées pour tester la plateforme.</p>
+      <form method="post" action="{% url 'project_sync' project.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm">Synchroniser maintenant</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>📁 Importer un fichier (CSV / Excel / SPSS)</h6>
+      <form method="post" action="{% url 'project_upload' project.pk %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ upload_form.file }}
+        <button type="submit" class="btn btn-outline-primary btn-sm mt-2">Importer</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>🧹 Nettoyage des données</h6>
+      <p class="text-muted small mb-2">Clé anti-doublons actuelle : <strong>{{ project.dedup_key_column|default:"non définie" }}</strong></p>
+      <form method="post" action="{% url 'project_duplicates' project.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-warning btn-sm">Détecter les doublons</button>
+      </form>
+      <a href="{% url 'project_variables' project.pk %}" class="btn btn-outline-secondary btn-sm mt-2">⚙️ Gérer les variables ({{ variables.count }})</a>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>📊 Analyses disponibles</h6>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <a href="{% url 'descriptive' project.pk %}" class="btn btn-sm btn-primary">Statistiques descriptives</a>
+        <a href="{% url 'crosstab' project.pk %}" class="btn btn-sm btn-primary">Tableaux croisés (Chi²)</a>
+        <a href="{% url 'compare_means' project.pk %}" class="btn btn-sm btn-primary">Comparaison de moyennes</a>
+        <a href="{% url 'correlation' project.pk %}" class="btn btn-sm btn-primary">Corrélation</a>
+        <a href="{% url 'regression' project.pk %}" class="btn btn-sm btn-primary">Régression</a>
+        <a href="{% url 'reliability' project.pk %}" class="btn btn-sm btn-primary">Fiabilité (Alpha)</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

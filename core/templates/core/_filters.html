@@ -1,0 +1,20 @@
+{% load core_extras %}
+{% if filterable %}
+<div class="card p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    {% for f in extra_hidden %}<input type="hidden" name="{{ f.0 }}" value="{{ f.1 }}">{% endfor %}
+    {% for v in filterable %}
+    <div class="col-auto">
+      <label class="form-label small mb-0">{{ v.label|default:v.name }}</label>
+      <input type="text" name="f_{{ v.name }}" value="{{ filters|get_item:v.name }}" placeholder="valeur (ex: Cotonou)" class="form-control form-control-sm" style="width:160px">
+    </div>
+    {% endfor %}
+    <div class="col-auto">
+      <button type="submit" class="btn btn-sm btn-outline-primary">Filtrer</button>
+    </div>
+    <div class="col-auto">
+      <a href="?" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>
+    </div>
+  </form>
+</div>
+{% endif %}
