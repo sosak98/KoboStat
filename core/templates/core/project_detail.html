@@ -2,7 +2,13 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>{{ project.name }}</h3>
-  <a href="{% url 'report' project.pk %}" class="btn btn-outline-primary">📄 Mon rapport</a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'report' project.pk %}" class="btn btn-outline-primary">📄 Mon rapport</a>
+    <form method="post" action="{% url 'project_delete' project.pk %}" onsubmit="return confirm('Supprimer définitivement ce projet et toutes ses données ?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger">🗑️ Supprimer le projet</button>
+    </form>
+  </div>
 </div>
 
 <div class="row g-3 mb-4">

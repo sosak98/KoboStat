@@ -85,6 +85,17 @@ def project_detail(request, pk):
 
 
 @login_required
+def project_delete(request, pk):
+    project = _get_project(request, pk)
+    if request.method == "POST":
+        name = project.name
+        project.delete()
+        messages.success(request, f"Projet « {name} » supprimé définitivement.")
+        return redirect("project_list")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
 def project_sync(request, pk):
     project = _get_project(request, pk)
     try:
