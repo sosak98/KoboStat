@@ -3,8 +3,11 @@ applique le recodage des variables, détecte les doublons, et gère l'upload de
 fichiers CSV/Excel/SPSS comme source alternative à l'API Kobo."""
 import io
 import pandas as pd
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from .models import Submission, VariableMeta
+from . import kobo_client
 
 IGNORED_KOBO_FIELDS = {
     "_id", "_uuid", "formhub/uuid", "meta/instanceID", "_xform_id_string",
@@ -16,6 +19,45 @@ IGNORED_KOBO_FIELDS = {
 def normalize_submission(raw: dict) -> dict:
     """Nettoie un enregistrement brut Kobo (retire les métadonnées techniques)."""
     return {k: v for k, v in raw.items() if k not in IGNORED_KOBO_FIELDS and not k.startswith("_")}
+
+
+def sync_project_from_kobo(project) -> dict:
+    """Récupère les soumissions Kobo (ou génère des données de démo si aucun
+    token n'est configuré) et les enregistre en base. Utilisé à la fois par le
+    bouton manuel "Synchroniser" et par le point d'accès de synchronisation
+    automatique (cron externe)."""
+    if project.kobo_api_token and project.kobo_asset_uid:
+        raw = kobo_client.fetch_submissions(project.kobo_base_url, project.kobo_api_token, project.kobo_asset_uid)
+        source_label = "KoboToolbox"
+    else:
+        raw = kobo_client.generate_demo_submissions(120)
+        source_label = "démo (aucun token Kobo configuré)"
+
+    created = 0
+    for rec in raw:
+        uuid = str(rec.get("_uuid") or rec.get("_id"))
+        clean = normalize_submission(rec)
+        submitted_at = None
+        raw_date = rec.get("_submission_time")
+        if raw_date:
+            submitted_at = parse_datetime(raw_date)
+            if submitted_at and timezone.is_naive(submitted_at):
+                submitted_at = timezone.make_aware(submitted_at, timezone.get_default_timezone())
+        _, was_created = Submission.objects.update_or_create(
+            project=project, kobo_uuid=uuid,
+            defaults={"data": clean, "submitted_at": submitted_at},
+        )
+        created += 1 if was_created else 0
+
+    project.last_synced_at = timezone.now()
+    project.save(update_fields=["last_synced_at"])
+
+    df = build_dataframe(project, apply_recoding=False)
+    sync_variable_meta(project, df)
+    if project.dedup_key_column:
+        detect_and_flag_duplicates(project)
+
+    return {"source_label": source_label, "n_received": len(raw), "n_created": created}
 
 
 def build_dataframe(project, apply_recoding=True, filters: dict | None = None) -> pd.DataFrame:

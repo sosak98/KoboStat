@@ -1,12 +1,16 @@
 import base64
+import hmac
 import json
+import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 import pandas as pd
 
 from . import kobo_client, data_pipeline, stats_engine, interpretation
@@ -99,45 +103,42 @@ def project_delete(request, pk):
 def project_sync(request, pk):
     project = _get_project(request, pk)
     try:
-        if project.kobo_api_token and project.kobo_asset_uid:
-            raw = kobo_client.fetch_submissions(project.kobo_base_url, project.kobo_api_token, project.kobo_asset_uid)
-            source_label = "KoboToolbox"
-        else:
-            raw = kobo_client.generate_demo_submissions(120)
-            source_label = "démo (aucun token Kobo configuré)"
-
-        from django.utils.dateparse import parse_datetime
-
-        created = 0
-        for rec in raw:
-            uuid = str(rec.get("_uuid") or rec.get("_id"))
-            clean = data_pipeline.normalize_submission(rec)
-            submitted_at = None
-            raw_date = rec.get("_submission_time")
-            if raw_date:
-                submitted_at = parse_datetime(raw_date)
-                if submitted_at and timezone.is_naive(submitted_at):
-                    submitted_at = timezone.make_aware(submitted_at, timezone.get_default_timezone())
-            _, was_created = Submission.objects.update_or_create(
-                project=project, kobo_uuid=uuid,
-                defaults={"data": clean, "submitted_at": submitted_at},
-            )
-            created += 1 if was_created else 0
-
-        project.last_synced_at = timezone.now()
-        project.save(update_fields=["last_synced_at"])
-
-        df = data_pipeline.build_dataframe(project, apply_recoding=False)
-        data_pipeline.sync_variable_meta(project, df)
-        if project.dedup_key_column:
-            data_pipeline.detect_and_flag_duplicates(project)
-
-        messages.success(request, f"Synchronisation réussie ({source_label}) : {len(raw)} soumissions reçues, {created} nouvelles.")
+        result = data_pipeline.sync_project_from_kobo(project)
+        messages.success(
+            request,
+            f"Synchronisation réussie ({result['source_label']}) : "
+            f"{result['n_received']} soumissions reçues, {result['n_created']} nouvelles.",
+        )
     except kobo_client.KoboAPIError as e:
         messages.error(request, f"Échec de la synchronisation Kobo : {e}")
     except Exception as e:
         messages.error(request, f"Erreur inattendue : {e}")
     return redirect("project_detail", pk=pk)
+
+
+@csrf_exempt
+@require_GET
+def cron_sync_all(request):
+    """Point d'accès pour la synchronisation automatique planifiée (appelé par
+    un service externe type cron-job.org, sans authentification par session).
+    Protégé par un jeton secret (CRON_SYNC_SECRET) transmis en paramètre.
+    Synchronise tous les projets connectés à un vrai formulaire Kobo
+    (token + UID renseignés) — les projets en mode démo/upload sont ignorés."""
+    expected_secret = os.environ.get("CRON_SYNC_SECRET")
+    provided_secret = request.GET.get("token", "")
+    if not expected_secret or not hmac.compare_digest(expected_secret, provided_secret):
+        return JsonResponse({"error": "unauthorized"}, status=401)
+
+    results = []
+    projects = Project.objects.exclude(kobo_api_token="").exclude(kobo_asset_uid="")
+    for project in projects:
+        try:
+            r = data_pipeline.sync_project_from_kobo(project)
+            results.append({"project": project.name, "ok": True, **r})
+        except Exception as e:
+            results.append({"project": project.name, "ok": False, "error": str(e)})
+
+    return JsonResponse({"synced_projects": len(results), "details": results})
 
 
 @login_required

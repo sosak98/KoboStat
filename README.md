@@ -46,9 +46,25 @@ Gérez/ajoutez des comptes facilement via `/admin/` (interface Django native) un
 2. Ouvrez votre formulaire → l'UID apparaît dans l'URL (`.../#/forms/aXXXXXXXXXXXX/...`).
 3. Dans KoboStat : "+ Nouveau projet" → renseignez l'URL de base (`https://kf.kobotoolbox.org` ou
    `https://eu.kobotoolbox.org` selon votre serveur), le token, et l'UID.
-4. Cliquez sur **"Synchroniser maintenant"** à chaque fois que vous voulez récupérer les nouvelles réponses
-   (un vrai déclenchement automatique — cron/Celery beat toutes les X heures — se branche facilement sur
-   la même fonction `core.views.project_sync`, à activer en production).
+4. Cliquez sur **"Synchroniser maintenant"** à chaque fois que vous voulez récupérer les nouvelles réponses.
+
+### Synchronisation automatique (gratuite, sans Celery)
+
+Un point d'accès sécurisé `/cron/sync/?token=...` synchronise automatiquement **tous les projets**
+connectés à un vrai formulaire Kobo (token + UID renseignés). Il est protégé par la variable
+d'environnement `CRON_SYNC_SECRET` (générée automatiquement par `render.yaml`).
+
+Pour l'appeler périodiquement sans payer de service Celery/worker sur Render :
+
+1. Récupérez la valeur de `CRON_SYNC_SECRET` dans Render → service `kobostat` → onglet **"Environment"**
+2. Créez un compte gratuit sur **[cron-job.org](https://cron-job.org)**
+3. Créez un nouveau cron job :
+   - URL : `https://kobostat.onrender.com/cron/sync/?token=VOTRE_SECRET`
+   - Fréquence : toutes les heures (ou selon vos besoins)
+4. C'est tout — vos 12 utilisateurs verront toujours des données à jour sans avoir à cliquer sur "Synchroniser".
+
+⚠️ Le plan gratuit Render met le service en veille après 15 min d'inactivité : le premier appel du
+cron après une veille peut prendre 30-50 secondes à répondre (normal, le service se réveille).
 
 Sans token renseigné, le bouton "Synchroniser" génère un jeu de données de démonstration pour tester
 toute la plateforme immédiatement.

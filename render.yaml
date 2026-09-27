@@ -25,3 +25,5 @@ services:
       # (ex: 2 ou 3) si vous passez sur un plan payant avec plus de RAM.
       - key: WEB_CONCURRENCY
         value: "1"
+      - key: CRON_SYNC_SECRET
+        generateValue: true

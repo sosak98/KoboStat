@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path("", views.project_list, name="project_list"),
+    path("cron/sync/", views.cron_sync_all, name="cron_sync_all"),
     path("projects/new/", views.project_create, name="project_create"),
     path("projects/<int:pk>/", views.project_detail, name="project_detail"),
     path("projects/<int:pk>/delete/", views.project_delete, name="project_delete"),
