@@ -95,13 +95,21 @@ def project_sync(request, pk):
             raw = kobo_client.generate_demo_submissions(120)
             source_label = "démo (aucun token Kobo configuré)"
 
+        from django.utils.dateparse import parse_datetime
+
         created = 0
         for rec in raw:
             uuid = str(rec.get("_uuid") or rec.get("_id"))
             clean = data_pipeline.normalize_submission(rec)
+            submitted_at = None
+            raw_date = rec.get("_submission_time")
+            if raw_date:
+                submitted_at = parse_datetime(raw_date)
+                if submitted_at and timezone.is_naive(submitted_at):
+                    submitted_at = timezone.make_aware(submitted_at, timezone.get_default_timezone())
             _, was_created = Submission.objects.update_or_create(
                 project=project, kobo_uuid=uuid,
-                defaults={"data": clean, "submitted_at": rec.get("_submission_time") or None},
+                defaults={"data": clean, "submitted_at": submitted_at},
             )
             created += 1 if was_created else 0
 

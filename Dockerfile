@@ -28,4 +28,4 @@ RUN mkdir -p static staticfiles
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_users && python manage.py collectstatic --noinput && gunicorn kobostat.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3 --timeout 120"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_users && python manage.py collectstatic --noinput && gunicorn kobostat.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-1} --threads 4 --worker-class gthread --preload --max-requests 300 --max-requests-jitter 50 --timeout 120"]

@@ -20,3 +20,8 @@ services:
         fromDatabase:
           name: kobostat-db
           property: connectionString
+      # Plan gratuit Render = 512 Mo de RAM : 1 seul worker Gunicorn (avec
+      # plusieurs threads) pour éviter les "Out of memory". À augmenter
+      # (ex: 2 ou 3) si vous passez sur un plan payant avec plus de RAM.
+      - key: WEB_CONCURRENCY
+        value: "1"
