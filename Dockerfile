@@ -26,6 +26,17 @@ COPY . .
 
 RUN mkdir -p static staticfiles
 
+# collectstatic ne touche pas à la base de données : on le fait au moment du
+# build (pas de compte à rebours "port scan" côté Render à ce stade), plutôt
+# qu'au démarrage du conteneur.
+RUN python manage.py collectstatic --noinput
+
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_users && python manage.py collectstatic --noinput && gunicorn kobostat.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-1} --threads 4 --worker-class gthread --preload --max-requests 300 --max-requests-jitter 50 --timeout 120"]
+# --skip-checks : évite de ré-importer inutilement toute la pile scientifique
+# (pandas/scipy/statsmodels/matplotlib/seaborn/plotly/weasyprint, chargée via
+# core/views.py) à chaque commande de démarrage — gain de temps important sur
+# le CPU limité du plan gratuit Render, pour ouvrir le port plus vite.
+# Pas de --preload sur gunicorn : on ne veut pas retarder l'ouverture du port
+# le temps de charger l'appli (inutile de toute façon avec 1 seul worker).
+CMD ["sh", "-c", "python manage.py migrate --noinput --skip-checks && python manage.py seed_users --skip-checks && gunicorn kobostat.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-1} --threads 4 --worker-class gthread --max-requests 300 --max-requests-jitter 50 --timeout 120"]
